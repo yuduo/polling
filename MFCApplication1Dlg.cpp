@@ -6,11 +6,11 @@
 #include "MFCApplication1.h"
 #include "MFCApplication1Dlg.h"
 #include "afxdialogex.h"
-
+#include "tinyxml2.h"
+#include "MySQLDB.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -104,8 +104,50 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	LPDISPATCH lpdisp = NULL;
 	lpunknown->QueryInterface(IID_IDispatch,(void**)&lpdisp);
 
-	
-	
+	//xml
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile("c:\\setting.xml");
+	const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+	const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+	const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+	const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+
+	//mysql
+	MySQLDB m_DBDriver;
+	//数据库驱动
+	if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+	{
+		m_DBDriver.Disconnect();
+		return 0;
+	}
+
+	try
+	{
+
+		//创建SQL语句
+		std::string setchar = "set charset gbk;";
+		//执行查询
+		m_DBDriver.SQLExecute(setchar);
+
+		//创建SQL语句
+		std::string strSql = "SELECT *  FROM vqdplan";
+		//执行查询
+
+		MySQLResultSet logRecord;
+		m_DBDriver.SQLQuery(strSql, logRecord);
+		int nRowCount = (int)logRecord.size();
+		if (!nRowCount)return 0;
+		for (int i = 0; i < nRowCount; i++)
+		{
+			//lastName = logRecord[nRowCount - 1]["log_name"];
+			
+		}
+	}
+	catch (...)
+	{
+
+	}
 
 	m_workspace.InitNew("admin","123456","122.112.203.74",8083);
 
