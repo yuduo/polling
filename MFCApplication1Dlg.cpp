@@ -8,7 +8,7 @@
 #include "afxdialogex.h"
 #include "tinyxml2.h"
 #include "MySQLDB.h"
-#include "Socket.h"
+
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -69,19 +69,6 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CMFCApplication1Dlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
-unsigned __stdcall Answer(void* a) {
-	Socket* s = (Socket*)a;
-
-	//while (1) {
-		std::string r = s->ReceiveLine();
-		//if (r.empty()) break;
-		s->SendLine(r);
-	//}
-
-	delete s;
-
-	return 0;
-}
 
 // CMFCApplication1Dlg 消息处理程序
 
