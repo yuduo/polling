@@ -121,32 +121,38 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 		m_DBDriver.Disconnect();
 		return 0;
 	}
-
-	try
+	if (!m_DBDriver.CheckDB())
 	{
-
-		//创建SQL语句
-		std::string setchar = "set charset gbk;";
-		//执行查询
-		m_DBDriver.SQLExecute(setchar);
-
-		//创建SQL语句
-		std::string strSql = "SELECT *  FROM vqdplan";
-		//执行查询
-
-		MySQLResultSet logRecord;
-		m_DBDriver.SQLQuery(strSql, logRecord);
-		int nRowCount = (int)logRecord.size();
-		if (!nRowCount)return 0;
-		for (int i = 0; i < nRowCount; i++)
-		{
-			//lastName = logRecord[nRowCount - 1]["log_name"];
-			
-		}
+		return 0;
 	}
-	catch (...)
+	else
 	{
+		try
+		{
 
+			//创建SQL语句
+			std::string setchar = "set charset gbk;";
+			//执行查询
+			m_DBDriver.SQLExecute(setchar);
+
+			//创建SQL语句
+			std::string strSql = "SELECT *  FROM vqdplan";
+			//执行查询
+
+			MySQLResultSet logRecord;
+			m_DBDriver.SQLQuery(strSql, logRecord);
+			int nRowCount = (int)logRecord.size();
+			if (!nRowCount)return 0;
+			for (int i = 0; i < nRowCount; i++)
+			{
+				//lastName = logRecord[nRowCount - 1]["log_name"];
+
+			}
+		}
+		catch (...)
+		{
+
+		}
 	}
 
 	m_workspace.InitNew("admin","123456","122.112.203.74",8083);

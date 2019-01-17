@@ -115,6 +115,7 @@ typedef struct st_mysql_field {
   unsigned int decimals;      /* Number of decimals in field */
   unsigned int charsetnr;     /* Character set */
   enum enum_field_types type; /* Type of field. See mysql_com.h for types */
+  void *extension;
 } MYSQL_FIELD;
 
 typedef char **MYSQL_ROW;		/* return data as array of strings */
