@@ -8,6 +8,8 @@
 #include "afxdialogex.h"
 #include "tinyxml2.h"
 #include "MySQLDB.h"
+#include "Socket.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -67,6 +69,19 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CMFCApplication1Dlg::OnBnClickedOk)
 END_MESSAGE_MAP()
 
+unsigned __stdcall Answer(void* a) {
+	Socket* s = (Socket*)a;
+
+	//while (1) {
+		std::string r = s->ReceiveLine();
+		//if (r.empty()) break;
+		s->SendLine(r);
+	//}
+
+	delete s;
+
+	return 0;
+}
 
 // CMFCApplication1Dlg 消息处理程序
 
@@ -155,10 +170,26 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 		}
 	}
 
+	//socket
+	/*SocketServer in(2000, 5);
+
+	while (1) {
+		Socket* s = in.Accept();
+
+		unsigned ret;
+		_beginthreadex(0, 0, Answer, (void*)s, 0, &ret);
+	}*/
+	NetworkInit();
+	iNetworkInterface *p_iNetInface = new iNetworkInterface();
+	//p_TcpAcceptor = CreateTcpAcceptor((INetAcceptorSink*)p_iNetInface);	
+	p_TcpAcceptor = CreateRawTcpAcceptor(p_iNetInface);
+	p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
+
+
 	m_workspace.InitNew("admin","123456","122.112.203.74",8083);
 
 	m_player.ConnectToWorkspace(lpdisp);//
-	//m_workspace.ConnectToWorkspace(); 
+	 
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }

@@ -5,7 +5,7 @@
 #pragma once
 #include "playerctrl1.h"
 #include "workspacectrl1.h"
-
+#include "iNetworkInterface.h"
 
 // CMFCApplication1Dlg ¶Ô»°¿ò
 class CMFCApplication1Dlg : public CDialogEx
@@ -47,4 +47,6 @@ public:
 	void OnGetDeviceListSuccessedExtWorkspacectrl1(long Type, LPCTSTR bstrGroupId, LPCTSTR bstrXml);
 	void OnStateChangedPlayerctrl1(long lType);
 	void OnStreamCallBackPlayerctrl1(long nDataType, unsigned char* pData, long nLength, long UserData, long nWidth, long nHeight, long nFrameRate);
+
+	INetAcceptor *p_TcpAcceptor;
 };
