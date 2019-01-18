@@ -15,6 +15,7 @@ public:
 	int GetInterval();
 	void InitData(std::string strPlan, time_t tBeg, time_t tEnd, std::list<tagPosInfo>lstDev, int nIntv, int nVdCount);
 	int StartASnapTurn();
+	
 private:
 	std::string m_strPlanName;
 	std::list<tagPosInfo> m_lstPos;
@@ -51,6 +52,7 @@ public:
 	void SetSavePath(std::string strPath);
 	void  UpdateRunStatus(bool bRun);
 	int  JudgeAndStart();
+	void StartImmediate();
 private:
 	PLANINFO    m_tCurSelPlan;
 	HANDLE      m_hThread;

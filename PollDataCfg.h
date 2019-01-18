@@ -30,7 +30,13 @@
 
 #define DEFINE_XML_POLLPLAN_POSCFG	        _T("PosConfig")
 #define DEFINE_XML_POLLPLAN_POSINFO	        _T("PosInfo")
-
+enum
+{
+	WM_CHANGESCALE = WM_USER + 50,
+	WM_UPDATESNAPINFO,
+	WM_POLLSNAPVIDEO,
+	WM_POLLREFRESH,
+};
 
 typedef struct tagPosInfo
 {

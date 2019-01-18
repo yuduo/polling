@@ -8,11 +8,18 @@
 #include "afxdialogex.h"
 #include "tinyxml2.h"
 #include "MySQLDB.h"
+#include "PollDataCfg.h"
+#include "IVQSModule.h"
 
-
+#pragma comment(lib,"VQSModule.lib")
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+HWND				CMFCApplication1Dlg::m_hOwner;
+const HWND GetMainHwnd()
+{
+	return CMFCApplication1Dlg::m_hOwner;
+}
 
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
@@ -58,7 +65,12 @@ CMFCApplication1Dlg::CMFCApplication1Dlg(CWnd* pParent /*=NULL*/)
 void CMFCApplication1Dlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_PLAYERCTRL1, m_player);
+	DDX_Control(pDX, IDC_PLAYERCTRL1, m_player1);
+	DDX_Control(pDX, IDC_PLAYERCTRL2, m_player2);
+	DDX_Control(pDX, IDC_PLAYERCTRL3, m_player3);
+	DDX_Control(pDX, IDC_PLAYERCTRL4, m_player4);
+	DDX_Control(pDX, IDC_PLAYERCTRL5, m_player5);
+	DDX_Control(pDX, IDC_PLAYERCTRL6, m_player6);
 	DDX_Control(pDX, IDC_WORKSPACECTRL1, m_workspace);
 }
 
@@ -67,9 +79,200 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDOK, &CMFCApplication1Dlg::OnBnClickedOk)
+	ON_MESSAGE(WM_POLLSNAPVIDEO, ShowSnapPoll)
+	ON_MESSAGE(WM_UPDATESNAPINFO, PollMessageHandle)
+	
 END_MESSAGE_MAP()
+BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
+{
+	
+	switch (index)
+	{
+	case 0:
+		m_player1.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	case 1:
+		m_player2.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	case 2:
+		m_player3.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	case 3:
+		m_player4.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	case 4:
+		m_player5.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	case 5:
+		m_player6.DoSnapPicture(strFilePath.c_str(), 0);
+		break;
+	default:
+		break;
+	}
+
+	return false;
+}
+LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
+{
+
+	bool bBreak = true;
+
+	int nIndex = LOWORD(wParam);
+	int nCount = LOWORD(lParam);
+
+	int nind = nIndex - nCount;
+	if (nind < 0)
+	{
+		nind = 0;
+	}
+	int nscount = 0;
+	std::list<tagPosInfo>::iterator itDmList = m_tCurPlanInfo.lstDevice.begin();
+	//没有抓拍标志，不抓拍
+	if (m_tCurPlanInfo.wSnapFlag != 1)
+	{
+		return 1;
+	}
+
+	for (; itDmList != m_tCurPlanInfo.lstDevice.end(); itDmList++)
+	{
+		if (nIndex > nind)
+		{
+			nind++;
+			continue;
+		}
+		if (nscount < nCount)
+		{
+			std::string strPat = "";
+			sprintf((char*)strPat.c_str(), "%s\\%s\\", "f:", m_tCurPlanInfo.strPlanName.c_str());
+			//截图保存相应的目录下
+			SYSTEMTIME sm;
+			GetLocalTime(&sm);
+			std::string strFilePath;
 
 
+			sprintf((char*)strFilePath.c_str(), _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
+				sm.wYear, sm.wMonth, sm.wDay,
+				sm.wHour, sm.wMinute, sm.wSecond);
+			SaveSnapImage(nscount, strFilePath);
+			RESULT_VALUE lpResultOut;
+			if(VQS_API_GetVQSResult(strFilePath.c_str(),&lpResultOut))
+			{
+				//发送数据库
+			}
+			nscount++;
+		}
+		else
+		{
+			break;
+		}
+
+		nind++;
+	}
+
+
+	return 0;
+}
+
+void CMFCApplication1Dlg::Stop(int index) {
+	switch (index)
+	{
+	case 0:
+		m_player1.Stop();
+		break;
+	case 1:
+		m_player2.Stop();
+		break;
+	case 2:
+		m_player3.Stop();
+		break;
+	case 3:
+		m_player4.Stop();
+		break;
+	case 4:
+		m_player5.Stop();
+		break;
+	case 5:
+		m_player6.Stop();
+		break;
+	default:
+		break;
+	}
+}
+BOOL CMFCApplication1Dlg::OpenVideo(std::string strPosID,int index)
+{
+	CString strmode = "<?xml version=\"1.0\"?> \
+		<InviteConfig> \
+		<TransParam TransMode=\"TCP-C\" StreamCBMode=\"\" /> \
+		<VideoParam Codec=\"2\" Resolution=\"4\" Fps=\"25\" BRMode=\"1\" Kbps=\"2000\" Enbale=\"1\" />\
+		</InviteConfig> ";
+
+
+	
+	switch (index)
+	{
+	case 0:
+		m_player1.Invite(strPosID.c_str(), "", strmode);
+		break;
+	case 1:
+		m_player2.Invite(strPosID.c_str(), "", strmode);
+		break;
+	case 2:
+		m_player3.Invite(strPosID.c_str(), "", strmode);
+		break;
+	case 3:
+		m_player4.Invite(strPosID.c_str(), "", strmode);
+		break;
+	case 4:
+		m_player5.Invite(strPosID.c_str(), "", strmode);
+		break;
+	case 5:
+		m_player6.Invite(strPosID.c_str(), "", strmode);
+		break;
+
+	default:
+		break;
+	}
+	return true;
+}
+LRESULT  CMFCApplication1Dlg::ShowSnapPoll(WPARAM wParam, LPARAM lParam)
+{
+	int nIndex = LOWORD(wParam);
+	int nCount = LOWORD(lParam);
+
+	int nind = 0;
+	int nscount = 0;
+	//先停止上一轮的画面
+	for (int nStindex = 0; nStindex < nCount; nStindex++)
+	{
+		Stop(nStindex);
+	}
+
+	std::list<tagPosInfo>::iterator itDmList = m_tCurPlanInfo.lstDevice.begin();
+	for (; itDmList != m_tCurPlanInfo.lstDevice.end(); itDmList++)
+	{
+		if (nIndex > nind)
+		{
+			nind++;
+			continue;
+		}
+		if (nscount < nCount)
+		{
+			
+			//开始画面
+			OpenVideo(itDmList->strPosID.c_str(), nscount);
+
+			nscount++;
+		}
+		else
+		{
+			
+			break;
+		}
+
+		nind++;
+	}
+	return 1;
+}
 // CMFCApplication1Dlg 消息处理程序
 
 BOOL CMFCApplication1Dlg::OnInitDialog()
@@ -168,15 +371,18 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	}*/
 	NetworkInit();
 	iNetworkInterface *p_iNetInface = new iNetworkInterface();
-	//p_TcpAcceptor = CreateTcpAcceptor((INetAcceptorSink*)p_iNetInface);	
 	p_TcpAcceptor = CreateRawTcpAcceptor(p_iNetInface);
-	p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
+	//p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
 
 
 	m_workspace.InitNew("admin","123456","122.112.203.74",8083);
 
-	m_player.ConnectToWorkspace(lpdisp);//
-	 
+	m_player1.ConnectToWorkspace(lpdisp);//
+	/*m_player2.ConnectToWorkspace(lpdisp);
+	m_player3.ConnectToWorkspace(lpdisp);
+	m_player4.ConnectToWorkspace(lpdisp);
+	m_player5.ConnectToWorkspace(lpdisp);
+	m_player6.ConnectToWorkspace(lpdisp);*/
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -236,7 +442,7 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
-	m_player.DoSnapPicture("f:\\test.bmp", 0);
+//	m_player.DoSnapPicture("f:\\test.bmp", 0);
 	
 }
 BEGIN_EVENTSINK_MAP(CMFCApplication1Dlg, CDialogEx)
@@ -266,6 +472,7 @@ void CMFCApplication1Dlg::OnStreamInfoPlayerctrl1(LPCTSTR bstrXml)
 {
 	// TODO: 在此处添加消息处理程序代码
 	printf("4444");
+	
 	OutputDebugString("3341234234\n");
 }
 
@@ -279,6 +486,7 @@ void CMFCApplication1Dlg::OnInitSuccessedWorkspacectrl1()
 {
 	// TODO: 在此处添加消息处理程序代码
 	m_workspace.GetDeviceListExt(2, "32000000002160000001");
+	
 }
 
 
@@ -303,14 +511,18 @@ void CMFCApplication1Dlg::OnGetDeviceListSuccessedExtWorkspacectrl1(long Type, L
 		<VideoParam Codec=\"2\" Resolution=\"4\" Fps=\"25\" BRMode=\"1\" Kbps=\"2000\" Enbale=\"1\" />\
 		</InviteConfig> ";
 
-	//m_player.Invite("32050912001310000042","","");YUV
-	m_player.Invite("32000000001310000015", "", strmode);
+
+	m_player1.Invite("32000000001310000016", "", strmode);
 }
 
 
 void CMFCApplication1Dlg::OnStateChangedPlayerctrl1(long lType)
 {
 	// TODO: 在此处添加消息处理程序代码
+	if (lType == 0)
+	{
+		
+	}
 }
 
 
@@ -319,4 +531,5 @@ void CMFCApplication1Dlg::OnStateChangedPlayerctrl1(long lType)
 void CMFCApplication1Dlg::OnStreamCallBackPlayerctrl1(long nDataType, unsigned char* pData, long nLength, long UserData, long nWidth, long nHeight, long nFrameRate)
 {
 	// TODO: 在此处添加消息处理程序代码
+
 }

@@ -1,8 +1,9 @@
 #include "stdafx.h"
 #include "PollFunction.h"
-
+#include "MFCApplication1Dlg.h"
 #include <iostream>
 
+extern const HWND GetMainHwnd();
 
 CPollFunction::CPollFunction()
 {
@@ -237,7 +238,14 @@ int  CPollFunction::JudgeAndStart()
 	}
 	return 0;
 }
-
+void CPollFunction::StartImmediate()
+{
+	if (GetRunStatus())
+	{
+		//cOneTurn.InitData(m_tCurSelPlan.strPlanName, tbeg, tend, m_tCurSelPlan.lstDevice, m_tCurSelPlan.wInterval, m_tCurSelPlan.wVidCount);
+		cOneTurn.StartPoll();
+	}
+}
 
 void CPollFunction::SendWarningMail()
 {
@@ -338,7 +346,7 @@ int COneTurnPoll::StartATurn()
 
 	//开始画面
 	//
-	
+	PostMessage(GetMainHwnd(), WM_POLLSNAPVIDEO, m_nPollIndex, m_nVdCount);
 	m_nPollIndex = m_nPollIndex + m_nVdCount;
 	
 	if (m_nPollIndex >= m_lstPos.size())
@@ -356,7 +364,7 @@ int COneTurnPoll::StartASnapTurn()
 
 	//开始画面
 	//
-	
+	PostMessage(GetMainHwnd(), WM_UPDATESNAPINFO, m_nPollIndex, m_nVdCount);
 
 	return 0;
 }
