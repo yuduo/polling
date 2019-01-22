@@ -192,7 +192,7 @@ int  CPollFunction::JudgeAndStart()
 	{
 		std::string strBeg = "";
 		std::string strEnd = "";
-		std::size_t tfound = (*itTimList).find(",");
+		std::size_t tfound = (*itTimList).find("-");
 		if (tfound != std::string::npos)
 		{
 			strBeg = (*itTimList).substr(0, tfound);
@@ -230,7 +230,7 @@ int  CPollFunction::JudgeAndStart()
 	}
 	else
 	{
-		if (GetRunStatus())
+		//if (GetRunStatus())
 		{
 			cOneTurn.InitData(m_tCurSelPlan.strPlanName, tbeg, tend, m_tCurSelPlan.lstDevice, m_tCurSelPlan.wInterval, m_tCurSelPlan.wVidCount);
 			cOneTurn.StartPoll();

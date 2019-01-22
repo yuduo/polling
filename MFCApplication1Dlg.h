@@ -71,6 +71,7 @@ public:
 
 	INetAcceptor *p_TcpAcceptor;
 	CPollFunction m_pollFun;
+	int m_immediteSession;
 public:
 	static HWND					m_hOwner;
 	PLANINFO       m_tCurPlanInfo;

@@ -88,6 +88,7 @@ END_MESSAGE_MAP()
 LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
 {
 	m_pollFun.StartImmediate();
+	m_immediteSession++;
 	return 0;
 }
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
@@ -135,10 +136,10 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 	int nscount = 0;
 	std::list<tagPosInfo>::iterator itDmList = m_tCurPlanInfo.lstDevice.begin();
 	//没有抓拍标志，不抓拍
-	if (m_tCurPlanInfo.wSnapFlag != 1)
+	/*if (m_tCurPlanInfo.wSnapFlag != 1)
 	{
 		return 1;
-	}
+	}*/
 
 	for (; itDmList != m_tCurPlanInfo.lstDevice.end(); itDmList++)
 	{
@@ -150,19 +151,20 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 		if (nscount < nCount)
 		{
 			std::string strPat = "";
-			sprintf((char*)strPat.c_str(), "%s\\%s\\", "f:", m_tCurPlanInfo.strPlanName.c_str());
+			sprintf((char*)strPat.c_str(), "%s\\%s\\", "f:", "temp");
 			//截图保存相应的目录下
 			SYSTEMTIME sm;
 			GetLocalTime(&sm);
-			std::string strFilePath;
+			char strFilePath[100];
 
 
-			sprintf((char*)strFilePath.c_str(), _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
+			sprintf((char*)strFilePath, _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
 				sm.wYear, sm.wMonth, sm.wDay,
 				sm.wHour, sm.wMinute, sm.wSecond);
+			
 			SaveSnapImage(nscount, strFilePath);
 			RESULT_VALUE lpResultOut;
-			if(VQS_API_GetVQSResult(strFilePath.c_str(),&lpResultOut))
+			if(VQS_API_GetVQSResult(strFilePath,&lpResultOut))
 			{
 				//发送数据库
 			}
@@ -311,6 +313,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	m_hOwner = m_hWnd;
 	// TODO: 在此添加额外的初始化代码
 	LPUNKNOWN  lpunknown = m_workspace.GetControlUnknown();
 	LPDISPATCH lpdisp = NULL;
@@ -343,12 +346,12 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 		{
 
 			//创建SQL语句
-			std::string setchar = "set charset gbk;";
+			std::string setchar = "set charset utf8;";
 			//执行查询
 			m_DBDriver.SQLExecute(setchar);
 
 			//创建SQL语句
-			std::string strSql = "SELECT *  FROM vqdplan";
+			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID where DIA_TIME=1";
 			//执行查询
 
 			MySQLResultSet logRecord;
@@ -357,9 +360,38 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 			if (!nRowCount)return 0;
 			for (int i = 0; i < nRowCount; i++)
 			{
-				//lastName = logRecord[nRowCount - 1]["log_name"];
-
+				PLANINFO plan;
+				plan.InitData();
+				plan.wInterval = atol(logRecord[i]["COL_INTERVAL"].c_str());
+				plan.strPlanName = logRecord[i]["COL_PLAN_NAME"];
+				tagPosInfo tag;
+				tag.strPosID= logRecord[i]["MON_ID"];
+				plan.lstDevice.push_back(tag);
+				if (logRecord[i]["MONDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["MONDAY"]);
+				}
+				if (logRecord[i]["TUESDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["TUESDAY"]);
+				}
+				if (logRecord[i]["WEDNESDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["WEDNESDAY"]);
+				}
+				if (logRecord[i]["THURSDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["THURSDAY"]);
+				}
+				if (logRecord[i]["FRIDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["FRIDAY"]);
+				}
+				if (logRecord[i]["SATURDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["SATURDAY"]);
+				}
+				if (logRecord[i]["SUNDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["SUNDAY"]);
+				}
+				m_pollFun.SetPollPlan(plan);
+				m_tCurPlanInfo = plan;
 			}
+			m_pollFun.JudgeAndStart();
 		}
 		catch (...)
 		{
@@ -382,6 +414,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	m_player6.ConnectToWorkspace(lpdisp);
 
 	p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
+	m_immediteSession = 1;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -441,7 +474,7 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
-	m_player1.DoSnapPicture("f:\\test.bmp", 0);
+	//m_player1.DoSnapPicture("f:\\test.bmp", 0);
 	
 }
 BEGIN_EVENTSINK_MAP(CMFCApplication1Dlg, CDialogEx)
@@ -484,7 +517,7 @@ void CMFCApplication1Dlg::OnInviteFailedPlayerctrl1(long lType)
 void CMFCApplication1Dlg::OnInitSuccessedWorkspacectrl1()
 {
 	// TODO: 在此处添加消息处理程序代码
-	m_workspace.GetDeviceListExt(2, "32000000002160000001");
+	//m_workspace.GetDeviceListExt(2, "32000000002160000001");
 	
 }
 
@@ -504,14 +537,14 @@ void CMFCApplication1Dlg::OnGetDeviceListFailedWorkspacectrl1(long lCode)
 void CMFCApplication1Dlg::OnGetDeviceListSuccessedExtWorkspacectrl1(long Type, LPCTSTR bstrGroupId, LPCTSTR bstrXml)
 {
 	// TODO: 在此处添加消息处理程序代码
-	CString strmode = "<?xml version=\"1.0\"?> \
+	/*CString strmode = "<?xml version=\"1.0\"?> \
 		<InviteConfig> \
 		<TransParam TransMode=\"TCP-C\" StreamCBMode=\"\" /> \
 		<VideoParam Codec=\"2\" Resolution=\"4\" Fps=\"25\" BRMode=\"1\" Kbps=\"2000\" Enbale=\"1\" />\
 		</InviteConfig> ";
 
 
-	m_player1.Invite("32000000001310000016", "", strmode);
+	m_player1.Invite("32000000001310000016", "", strmode);*/
 }
 
 
