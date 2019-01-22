@@ -189,6 +189,7 @@
   <ItemGroup>
     <ClInclude Include="iNetworkInterface.h" />
     <ClInclude Include="IVQSModule.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="MFCApplication1.h" />
     <ClInclude Include="MFCApplication1Dlg.h" />
     <ClInclude Include="MySQLDB.h" />

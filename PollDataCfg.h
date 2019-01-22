@@ -36,6 +36,7 @@ enum
 	WM_UPDATESNAPINFO,
 	WM_POLLSNAPVIDEO,
 	WM_POLLREFRESH,
+	WM_POLLINMIDITE,
 };
 
 typedef struct tagPosInfo

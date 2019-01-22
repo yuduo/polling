@@ -4,8 +4,11 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-
+#include "json.hpp"
+#include "PollDataCfg.h"
 using namespace std;
+#define SUPPORT_TOTOAL 8
+extern const HWND GetMainHwnd();
 
 iNetworkInterface::iNetworkInterface()
 {
@@ -64,10 +67,6 @@ int iNetworkInterface::OnDisconnect(int nReason, INetConnection *pCon)
 //接收Client数据
 int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection *pCon)
 {
-	//char recvChar[1000]={0};
-	//sprintf_s(recvChar,"%s",pData);//格式化输出至Str
-	//string retXMLStr("<result>boolean</result>");
-	//pCon->SendData((unsigned char *)retXMLStr.c_str(),strlen(retXMLStr.c_str()));
 
 	string recXMLValueStr("");//Receive	
 	string retXMLStr("");     //Result
@@ -77,20 +76,29 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 			recXMLValueStr = tempStr;
 			//处理XMLStr			
 
-			/*if(NULL != xmlo)
+
+			using json = nlohmann::json;
+			auto root = json::parse(tempStr);
+			//version(id，vqid阀值表)
+			//计划id（计划表）
+
+			//get current run number
+			int current = 1;
+			if (current<SUPPORT_TOTOAL)
 			{
-				retXMLStr = xmlo->LoadXmlMethod(recXMLValueStr);
-			}*/
+				PostMessage(GetMainHwnd(), WM_POLLINMIDITE, current, 0);
+			}
+			else {
+				retXMLStr = "too much....";
 
-			
-			retXMLStr="Welcom login....";
-			
 
-			pCon->SendData((unsigned char *)retXMLStr.c_str(),strlen(retXMLStr.c_str()));//发送数据->client
+				pCon->SendData((unsigned char *)retXMLStr.c_str(), strlen(retXMLStr.c_str()));//发送数据->client
+			}
+			
 		}
 		catch(...)
 		{
-			/*if (NULL != xmlo){ delete xmlo;}	*/
+			
 		}
 	return 1;
 }

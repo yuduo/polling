@@ -8,6 +8,7 @@
 #include "iNetworkInterface.h"
 #include "resource.h"
 #include "PollDataCfg.h"
+#include "PollFunction.h"
 // CMFCApplication1Dlg ¶Ô»°¿ò
 class CMFCApplication1Dlg : public CDialogEx
 {
@@ -27,6 +28,8 @@ protected:
 	HICON m_hIcon;
 
 	LRESULT OnHandleMessage(WPARAM wParam, LPARAM lParam);
+
+	LRESULT PollImmidate(WPARAM wParam, LPARAM lParam);
 
 	BOOL SaveSnapImage(int index, std::string strFilePath);
 
@@ -67,6 +70,7 @@ public:
 	void OnStreamCallBackPlayerctrl1(long nDataType, unsigned char* pData, long nLength, long UserData, long nWidth, long nHeight, long nFrameRate);
 
 	INetAcceptor *p_TcpAcceptor;
+	CPollFunction m_pollFun;
 public:
 	static HWND					m_hOwner;
 	PLANINFO       m_tCurPlanInfo;

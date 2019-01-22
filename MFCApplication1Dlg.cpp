@@ -81,8 +81,15 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_BN_CLICKED(IDOK, &CMFCApplication1Dlg::OnBnClickedOk)
 	ON_MESSAGE(WM_POLLSNAPVIDEO, ShowSnapPoll)
 	ON_MESSAGE(WM_UPDATESNAPINFO, PollMessageHandle)
+	ON_MESSAGE(WM_POLLINMIDITE, PollImmidate)
 	
 END_MESSAGE_MAP()
+
+LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
+{
+	m_pollFun.StartImmediate();
+	return 0;
+}
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
 {
 	
@@ -360,29 +367,21 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 		}
 	}
 
-	//socket
-	/*SocketServer in(2000, 5);
-
-	while (1) {
-		Socket* s = in.Accept();
-
-		unsigned ret;
-		_beginthreadex(0, 0, Answer, (void*)s, 0, &ret);
-	}*/
 	NetworkInit();
 	iNetworkInterface *p_iNetInface = new iNetworkInterface();
 	p_TcpAcceptor = CreateRawTcpAcceptor(p_iNetInface);
-	//p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
-
+	
 
 	m_workspace.InitNew("admin","123456","122.112.203.74",8083);
 
 	m_player1.ConnectToWorkspace(lpdisp);//
-	/*m_player2.ConnectToWorkspace(lpdisp);
+	m_player2.ConnectToWorkspace(lpdisp);
 	m_player3.ConnectToWorkspace(lpdisp);
 	m_player4.ConnectToWorkspace(lpdisp);
 	m_player5.ConnectToWorkspace(lpdisp);
-	m_player6.ConnectToWorkspace(lpdisp);*/
+	m_player6.ConnectToWorkspace(lpdisp);
+
+	p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -442,7 +441,7 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 {
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
-//	m_player.DoSnapPicture("f:\\test.bmp", 0);
+	m_player1.DoSnapPicture("f:\\test.bmp", 0);
 	
 }
 BEGIN_EVENTSINK_MAP(CMFCApplication1Dlg, CDialogEx)
