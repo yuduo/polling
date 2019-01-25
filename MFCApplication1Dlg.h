@@ -29,7 +29,11 @@ protected:
 
 	LRESULT OnHandleMessage(WPARAM wParam, LPARAM lParam);
 
+	static unsigned int __stdcall ThreadPollImmediate(void * pParam);
+
 	LRESULT PollImmidate(WPARAM wParam, LPARAM lParam);
+
+	void AnalysisOne(std::string strPosID, int nscount);
 
 	BOOL SaveSnapImage(int index, std::string strFilePath);
 
@@ -71,8 +75,10 @@ public:
 
 	INetAcceptor *p_TcpAcceptor;
 	CPollFunction m_pollFun;
-	int m_immediteSession;
+	std::string m_planid;
+	HANDLE      m_hThread;
 public:
+	static int m_immediteSession;
 	static HWND					m_hOwner;
 	PLANINFO       m_tCurPlanInfo;
 };

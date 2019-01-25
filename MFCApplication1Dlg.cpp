@@ -16,11 +16,15 @@
 #define new DEBUG_NEW
 #endif
 HWND				CMFCApplication1Dlg::m_hOwner;
+int CMFCApplication1Dlg::m_immediteSession;
 const HWND GetMainHwnd()
 {
 	return CMFCApplication1Dlg::m_hOwner;
 }
-
+const int GetSession()
+{
+	return CMFCApplication1Dlg::m_immediteSession;
+}
 // 用于应用程序“关于”菜单项的 CAboutDlg 对话框
 
 class CAboutDlg : public CDialogEx
@@ -84,12 +88,166 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_MESSAGE(WM_POLLINMIDITE, PollImmidate)
 	
 END_MESSAGE_MAP()
+unsigned int CMFCApplication1Dlg::ThreadPollImmediate(void *pParam)
+{
+	CMFCApplication1Dlg* pThis = (CMFCApplication1Dlg*)pParam;
+	m_immediteSession++;
+	//xml
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile("c:\\setting.xml");
+	const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+	const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+	const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+	const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
 
+	//mysql
+	MySQLDB m_DBDriver;
+	//数据库驱动
+	if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+	{
+		m_DBDriver.Disconnect();
+		return 0;
+	}
+	if (!m_DBDriver.CheckDB())
+	{
+		return 0;
+	}
+	else
+	{
+		try
+		{
+
+			//创建SQL语句
+			std::string setchar = "set charset utf8;";
+			//执行查询
+			m_DBDriver.SQLExecute(setchar);
+
+			//创建SQL语句
+			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID where vqdplan.ID=" + pThis->m_planid;
+			//执行查询
+
+			MySQLResultSet logRecord;
+			m_DBDriver.SQLQuery(strSql, logRecord);
+			int nRowCount = (int)logRecord.size();
+			if (!nRowCount)return 0;
+			for (int i = 0; i < nRowCount; i++)
+			{
+				PLANINFO plan;
+				plan.InitData();
+
+				plan.strPlanName = logRecord[i]["COL_PLAN_NAME"];
+				tagPosInfo tag;
+				tag.strPosID = logRecord[i]["MON_ID"];
+				plan.lstDevice.push_back(tag);
+				//开始画面
+				pThis->OpenVideo(logRecord[i]["MON_ID"], m_immediteSession);
+				Sleep(10000);
+				pThis->AnalysisOne(logRecord[i]["MON_ID"], m_immediteSession);
+				pThis->Stop(m_immediteSession);
+			}
+
+		}
+		catch (...)
+		{
+
+		}
+	}
+	m_immediteSession--;
+	return 0;
+}
 LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
 {
-	m_pollFun.StartImmediate();
-	m_immediteSession++;
+	//plan id
+	LPCTSTR l = (LPCTSTR)lParam;
+	char *p = (char*)lParam;
+	m_planid = "2";
+	
+
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, ThreadPollImmediate, this, 0, 0);
+
+
+	
+
 	return 0;
+}
+void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount)
+{
+	std::string strPat = "";
+	sprintf((char*)strPat.c_str(), "%s\\%s", "f:", "temp");
+	//截图保存相应的目录下
+	SYSTEMTIME sm;
+	GetLocalTime(&sm);
+	char strFilePath[100];
+
+
+	sprintf((char*)strFilePath, _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), strPosID.c_str(),
+		sm.wYear, sm.wMonth, sm.wDay,
+		sm.wHour, sm.wMinute, sm.wSecond);
+
+	SaveSnapImage(nscount, strFilePath);
+	RESULT_VALUE lpResultOut;
+	if (VQS_API_GetVQSResult(strFilePath, &lpResultOut))
+	{
+		//发送数据库
+		//xml
+		tinyxml2::XMLDocument doc;
+		doc.LoadFile("c:\\setting.xml");
+		const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+		const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+		const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+		const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+		//mysql
+		MySQLDB m_DBDriver;
+		//数据库驱动
+		if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+		{
+			m_DBDriver.Disconnect();
+			return ;
+		}
+		if (!m_DBDriver.CheckDB())
+		{
+			return ;
+		}
+		else
+		{
+			try
+			{
+
+				//创建SQL语句
+				std::string setchar = "set charset utf8;";
+				//执行查询
+				m_DBDriver.SQLExecute(setchar);
+
+				//创建SQL语句
+				std::string strSql = "insert into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) values('";
+				strSql += lpResultOut.bytColorCastValue;
+				strSql += "','";
+				strSql += lpResultOut.bytClarityValue;
+				strSql += "','";
+				strSql += lpResultOut.bytBrightValue;
+				strSql += "','";
+				strSql += lpResultOut.bytNoiseValue;
+				strSql += "','";
+				strSql += lpResultOut.bytWaveValue;
+				strSql += "','";
+				strSql += lpResultOut.bytMovedValue;
+				strSql += "','";
+				strSql += lpResultOut.bytFreezeValue;
+				strSql += "','";
+				strSql += lpResultOut.bytSignalValue + "')";
+				//执行查询
+
+				MySQLResultSet logRecord;
+				m_DBDriver.SQLQuery(strSql, logRecord);
+
+			}
+			catch (...)
+			{
+
+			}
+		}
+	}
 }
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
 {
@@ -167,6 +325,64 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 			if(VQS_API_GetVQSResult(strFilePath,&lpResultOut))
 			{
 				//发送数据库
+				//xml
+				tinyxml2::XMLDocument doc;
+				doc.LoadFile("c:\\setting.xml");
+				const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+				const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+				const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+				const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+				//mysql
+				MySQLDB m_DBDriver;
+				//数据库驱动
+				if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+				{
+					m_DBDriver.Disconnect();
+					return 0;
+				}
+				if (!m_DBDriver.CheckDB())
+				{
+					return 0;
+				}
+				else
+				{
+					try
+					{
+
+						//创建SQL语句
+						std::string setchar = "set charset utf8;";
+						//执行查询
+						m_DBDriver.SQLExecute(setchar);
+
+						//创建SQL语句
+						std::string strSql = "insert into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) values('";
+						strSql += lpResultOut.bytColorCastValue;
+						strSql += "','";
+						strSql +=lpResultOut.bytClarityValue;
+						strSql += "','";
+						strSql += lpResultOut.bytBrightValue;
+						strSql += "','";
+						strSql += lpResultOut.bytNoiseValue;
+						strSql += "','";
+						strSql += lpResultOut.bytWaveValue;
+						strSql += "','";
+						strSql += lpResultOut.bytMovedValue;
+						strSql += "','";
+						strSql += lpResultOut.bytFreezeValue;
+						strSql += "','";
+						strSql += lpResultOut.bytSignalValue + "')";
+						//执行查询
+
+						MySQLResultSet logRecord;
+						m_DBDriver.SQLQuery(strSql, logRecord);
+						
+					}
+					catch (...)
+					{
+
+					}
+				}
 			}
 			nscount++;
 		}
@@ -283,7 +499,7 @@ LRESULT  CMFCApplication1Dlg::ShowSnapPoll(WPARAM wParam, LPARAM lParam)
 	return 1;
 }
 // CMFCApplication1Dlg 消息处理程序
-
+//#include "json.hpp"
 BOOL CMFCApplication1Dlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
@@ -313,6 +529,12 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 
+	//using json = nlohmann::json;
+	//auto root = json::parse("{\"planId\": \"2\"}");
+	////version(id，vqid阀值表)
+	////计划id（计划表）
+	//int planId = root["planId"];
+
 	m_hOwner = m_hWnd;
 	// TODO: 在此添加额外的初始化代码
 	LPUNKNOWN  lpunknown = m_workspace.GetControlUnknown();
@@ -327,7 +549,8 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
 	const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
 
-
+	const char* localip = doc.FirstChildElement("local")->FirstChildElement("ipaddress")->GetText();
+	const char* localnat = doc.FirstChildElement("local")->FirstChildElement("nataddress")->GetText();
 	//mysql
 	MySQLDB m_DBDriver;
 	//数据库驱动
@@ -351,7 +574,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 			m_DBDriver.SQLExecute(setchar);
 
 			//创建SQL语句
-			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID where DIA_TIME=1";
+			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID left join collector on vqdplan.COLLECTOR_ID=collector.ID where DIA_TIME=1  AND IP_ADDRESS='" + std::string(localip) + "' or IP_ADDRESS='" + std::string(localnat) + "'";
 			//执行查询
 
 			MySQLResultSet logRecord;
@@ -414,7 +637,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 	m_player6.ConnectToWorkspace(lpdisp);
 
 	p_TcpAcceptor->StartListen(2000);//监听端口/hostIP(默认全部监听)
-	m_immediteSession = 1;
+	m_immediteSession = 0;
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
@@ -475,7 +698,8 @@ void CMFCApplication1Dlg::OnBnClickedOk()
 	// TODO: 在此添加控件通知处理程序代码
 	//CDialogEx::OnOK();
 	//m_player1.DoSnapPicture("f:\\test.bmp", 0);
-	
+	std::string planId = "2";
+	::PostMessage(m_hOwner, WM_POLLINMIDITE, 0, (LPARAM)planId.c_str());
 }
 BEGIN_EVENTSINK_MAP(CMFCApplication1Dlg, CDialogEx)
 	

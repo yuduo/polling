@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "NetworkInterface.h"
 #pragma comment(lib,"NetworkModule.lib")
 
@@ -28,5 +29,6 @@ public:
 private:
 	//XMLInfoClass* xmlo;//÷∏’Î:¥¶¿ÌXML
 	//CUI_Main* cmdXMLPointer;
+	std::string planId;
 };
 

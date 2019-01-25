@@ -1,7 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "iNetworkInterface.h"
-#include <string>
+
 #include <iostream>
 #include <fstream>
 #include "json.hpp"
@@ -9,7 +9,7 @@
 using namespace std;
 #define SUPPORT_TOTOAL 8
 extern const HWND GetMainHwnd();
-
+extern const int GetSession();
 iNetworkInterface::iNetworkInterface()
 {
 	//xmlo = NULL;
@@ -68,38 +68,41 @@ int iNetworkInterface::OnDisconnect(int nReason, INetConnection *pCon)
 int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection *pCon)
 {
 
-	string recXMLValueStr("");//Receive	
 	string retXMLStr("");     //Result
 	string tempStr="";
-	try{   //Socket 传字符流/二进制流就接收什么,保持流不变
-			tempStr.append((const char*)pData); //接收到的是流
-			recXMLValueStr = tempStr;
-			//处理XMLStr			
-
-
-			using json = nlohmann::json;
-			auto root = json::parse(tempStr);
-			//version(id，vqid阀值表)
-			//计划id（计划表）
-
-			//get current run number
-			int current = 1;
-			if (current<SUPPORT_TOTOAL)
-			{
-				PostMessage(GetMainHwnd(), WM_POLLINMIDITE, current, 0);
-			}
-			else {
-				retXMLStr = "too much....";
-
-
-				pCon->SendData((unsigned char *)retXMLStr.c_str(), strlen(retXMLStr.c_str()));//发送数据->client
-			}
+	
+	tempStr.append((const char*)pData); //接收到的是流
 			
+
+
+	using json = nlohmann::json;
+	auto root = json::parse(tempStr);
+	//version(id，vqid阀值表)
+	//计划id（计划表）
+	this->planId=root["planId"];
+	//get current run number
+	int current = GetSession();
+	if (current<SUPPORT_TOTOAL)
+	{
+		PostMessage(GetMainHwnd(), WM_POLLINMIDITE, 0, (LPARAM)(LPCTSTR)planId.c_str());
+	}
+	else {
+		retXMLStr = "";
+		json j;
+		j["success"] = 1;
+		j["message"] = "服务器忙";
+		j["code"] = 1001;
+		try {   //Socket 传字符流/二进制流就接收什么,保持流不变
+
+			pCon->SendData((unsigned char *)j.dump().c_str(), strlen(j.dump().c_str()));//发送数据->client
 		}
 		catch(...)
 		{
 			
 		}
+	}
+			
+		
 	return 1;
 }
 
