@@ -43,10 +43,13 @@ protected:
 
 	BOOL OpenVideo(std::string strPosID, int index);
 
+	PLANINFO getPlanInfo(std::string strID);
+
 	LRESULT  ShowSnapPoll(WPARAM wParam, LPARAM lParam);
 
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();
+	void UpdatePlanStatus(std::string strID, int type);
 	LRESULT PollNextPlan(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
@@ -78,11 +81,12 @@ public:
 
 	INetAcceptor *p_TcpAcceptor;
 	CPollFunction m_pollFun;
+	CPollFunction m_pollFun1;
 	std::string m_planid;
 	HANDLE      m_hThread;
 	std::list< PLANINFO> m_planList;
 public:
 	static int m_immediteSession;
 	static HWND					m_hOwner;
-	PLANINFO       m_tCurPlanInfo;
+	
 };

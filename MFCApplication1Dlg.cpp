@@ -11,8 +11,10 @@
 #include "PollDataCfg.h"
 #include "IVQSModule.h"
 
-#define PLAN_COUNT 4
-
+#define PLAN_COUNT 1
+#define PLAN_STATUS_NULL 1
+#define PLAN_STATUS_RUNNING 2
+#define PLAN_STATUS_DONE 3
 #pragma comment(lib,"VQSModule.lib")
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -157,6 +159,7 @@ unsigned int CMFCApplication1Dlg::ThreadPollImmediate(void *pParam)
 		}
 	}
 	m_immediteSession--;
+	m_DBDriver.Disconnect();
 	return 0;
 }
 LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
@@ -251,6 +254,7 @@ void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount)
 
 			}
 		}
+		m_DBDriver.Disconnect();
 	}
 }
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
@@ -288,8 +292,9 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 	bool bBreak = true;
 
 	int nIndex = LOWORD(wParam);
-	int nCount = LOWORD(lParam);
-
+	int nCount = 1;
+	char *p = (char*)lParam;
+	PLANINFO m_tCurPlanInfo = getPlanInfo(p);
 	int nind = nIndex - nCount;
 	if (nind < 0)
 	{
@@ -387,6 +392,7 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 
 					}
 				}
+				m_DBDriver.Disconnect();
 			}
 			nscount++;
 		}
@@ -465,11 +471,24 @@ BOOL CMFCApplication1Dlg::OpenVideo(std::string strPosID,int index)
 	}
 	return true;
 }
+PLANINFO CMFCApplication1Dlg::getPlanInfo(std::string strID)
+{
+	std::list<PLANINFO>::iterator itList = m_planList.begin();
+	for (; itList != m_planList.end(); itList++)
+	{
+		if (itList->strPlanID == strID)
+		{
+			return *itList;
+		}
+	}
+	return *itList;
+}
 LRESULT  CMFCApplication1Dlg::ShowSnapPoll(WPARAM wParam, LPARAM lParam)
 {
 	int nIndex = LOWORD(wParam);
-	int nCount = LOWORD(lParam);
-
+	int nCount = 1;
+	char *p = (char*)lParam;
+	PLANINFO m_tCurPlanInfo = getPlanInfo(p);
 	int nind = 0;
 	int nscount = 0;
 	//先停止上一轮的画面
@@ -580,7 +599,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 			m_DBDriver.SQLExecute(setchar);
 
 			//创建SQL语句
-			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID left join collector on vqdplan.COLLECTOR_ID=collector.ID where DIA_TIME=1  AND IP_ADDRESS='" + std::string(localip) + "' or IP_ADDRESS='" + std::string(localnat) + "'";
+			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID left join collector on vqdplan.COLLECTOR_ID=collector.ID where DIA_TIME=1 and STATUS=0  AND IP_ADDRESS='" + std::string(localip) + "' or IP_ADDRESS='" + std::string(localnat) + "'";
 			//执行查询
 
 			MySQLResultSet logRecord;
@@ -596,6 +615,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 				}else
 					plan.wInterval = atol(logRecord[i]["COL_INTERVAL"].c_str());
 				plan.strPlanName = logRecord[i]["COL_PLAN_NAME"];
+				plan.strPlanID= logRecord[i]["ID"];
 				tagPosInfo tag;
 				tag.strPosID= logRecord[i]["MON_ID"];
 				plan.lstDevice.push_back(tag);
@@ -628,9 +648,20 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 			{
 				auto it = m_planList.begin();
 				m_pollFun.SetPollPlan(*it);
-				m_tCurPlanInfo = *it;
+				
+				m_pollFun.m_strID=((PLANINFO)*it).strPlanID;
 				m_pollFun.StartPoll();
 				
+			}
+			if (m_planList.size() > 1)
+			{
+				auto it = m_planList.begin();
+				it = std::next(it, 1);
+				m_pollFun1.SetPollPlan(*it);
+				
+				m_pollFun1.m_strID = ((PLANINFO)*it).strPlanID;
+				m_pollFun1.StartPoll();
+
 			}
 		}
 		catch (...)
@@ -638,6 +669,7 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 
 		}
 	}
+	m_DBDriver.Disconnect();
 
 	NetworkInit();
 	iNetworkInterface *p_iNetInface = new iNetworkInterface();
@@ -658,19 +690,69 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
+void CMFCApplication1Dlg::UpdatePlanStatus(std::string strID, int type) {
+	//xml
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile("c:\\setting.xml");
+	const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+	const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+	const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+	const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+	const char* localip = doc.FirstChildElement("local")->FirstChildElement("ipaddress")->GetText();
+	const char* localnat = doc.FirstChildElement("local")->FirstChildElement("nataddress")->GetText();
+	//mysql
+	MySQLDB m_DBDriver;
+	//数据库驱动
+	if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+	{
+		m_DBDriver.Disconnect();
+		return;
+	}
+	if (!m_DBDriver.CheckDB())
+	{
+		return;
+	}
+	else
+	{
+		try
+		{
+
+			//创建SQL语句
+			std::string setchar = "set charset utf8;";
+			//执行查询
+			m_DBDriver.SQLExecute(setchar);
+
+			//创建SQL语句
+			std::string strSql = "update vqdplan set STATUS=" + std::string(type,1) + "where ID='" + strID + "'";
+			//执行查询
+
+			MySQLResultSet logRecord;
+			m_DBDriver.SQLQuery(strSql, logRecord);
+			
+		}
+		catch (...)
+		{
+
+		}
+	}
+	m_DBDriver.Disconnect();
+}
 LRESULT CMFCApplication1Dlg::PollNextPlan(WPARAM wParam, LPARAM lParam)
 {
+	char *p = (char*)lParam;
+	UpdatePlanStatus(p,PLAN_STATUS_DONE);
+	refreshData();
 	std::list<PLANINFO>::iterator itList = m_planList.begin();
 	for (; itList != m_planList.end(); itList++)
 	{
-		if (itList->strPlanName == m_tCurPlanInfo.strPlanName)
-		{
-			auto it = std::next(itList, 1);
-			m_pollFun.SetPollPlan(*it);
-			m_tCurPlanInfo = *it;
-			m_pollFun.StartPoll();
-			break;
-		}
+		
+		auto it = m_planList.begin();
+		m_pollFun.SetPollPlan(*it);
+		
+		m_pollFun.StartPoll();
+		break;
+		
 	}
 	return 0;
 }
@@ -909,4 +991,5 @@ void CMFCApplication1Dlg::refreshData()
 
 		}
 	}
+	m_DBDriver.Disconnect();
 }

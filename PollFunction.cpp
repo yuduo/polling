@@ -224,7 +224,7 @@ int  CPollFunction::JudgeAndStart()
 			//
 			//下一个任务
 			
-			PostMessage(GetMainHwnd(), WM_POLLNEXTPLAN, 0, 0);
+			PostMessage(GetMainHwnd(), WM_POLLNEXTPLAN, 0, (LPARAM)(LPCTSTR)m_tCurSelPlan.strPlanID.c_str());
 			
 
 		}
@@ -234,7 +234,7 @@ int  CPollFunction::JudgeAndStart()
 	{
 		if (GetRunStatus())
 		{
-			cOneTurn.InitData(m_tCurSelPlan.strPlanName, tbeg, tend, m_tCurSelPlan.lstDevice, m_tCurSelPlan.wInterval, m_tCurSelPlan.wVidCount);
+			cOneTurn.InitData(m_tCurSelPlan.strPlanID,m_tCurSelPlan.strPlanName, tbeg, tend, m_tCurSelPlan.lstDevice, m_tCurSelPlan.wInterval, m_tCurSelPlan.wVidCount);
 			cOneTurn.StartPoll();
 		}
 	}
@@ -324,8 +324,9 @@ int COneTurnPoll::GetInterval()
 	return m_nInterVal;
 }
 
-void COneTurnPoll::InitData(std::string strPlan, time_t tBeg, time_t tEnd, std::list<tagPosInfo>lstDev, int nIntv, int nVdCount)
+void COneTurnPoll::InitData(std::string strID, std::string strPlan, time_t tBeg, time_t tEnd, std::list<tagPosInfo>lstDev, int nIntv, int nVdCount)
 {
+	m_strPlanID = strID;
 	m_strPlanName= strPlan;
 	m_lstPos= lstDev;
 	m_tStart= tBeg;
@@ -349,7 +350,7 @@ int COneTurnPoll::StartATurn()
 
 	//开始画面
 	//
-	PostMessage(GetMainHwnd(), WM_POLLSNAPVIDEO, m_nPollIndex, m_nVdCount);
+	PostMessage(GetMainHwnd(), WM_POLLSNAPVIDEO, m_nPollIndex, (LPARAM)(LPCTSTR)m_strPlanID.c_str());
 	m_nPollIndex = m_nPollIndex + m_nVdCount;
 	
 	if (m_nPollIndex >= m_lstPos.size())
@@ -367,7 +368,7 @@ int COneTurnPoll::StartASnapTurn()
 
 	//开始画面
 	//
-	PostMessage(GetMainHwnd(), WM_UPDATESNAPINFO, m_nPollIndex, m_nVdCount);
+	PostMessage(GetMainHwnd(), WM_UPDATESNAPINFO, m_nPollIndex, (LPARAM)(LPCTSTR)m_strPlanID.c_str());
 
 	return 0;
 }

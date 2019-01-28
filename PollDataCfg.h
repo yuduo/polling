@@ -60,6 +60,7 @@ typedef struct tagPlanInfo
 	WORD		wSwitch;
 	WORD		wSnapFlag;
 	std::string strPlanName;
+	std::string strPlanID;
 	std::string strDateInfo;
 	std::list<std::string> strTimeList;
 	std::list<tagPosInfo>lstDevice;
@@ -72,6 +73,7 @@ typedef struct tagPlanInfo
 		wPlayCount = 0;
 		wSwitch = 0;
 		wSnapFlag = 0;
+		strPlanID = "";
 		strPlanName = "";
 		strDateInfo = "";
 		strTimeList.clear();

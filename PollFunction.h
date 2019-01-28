@@ -13,11 +13,12 @@ public:
 	bool StopPoll();
 	bool GetPollStatus();
 	int GetInterval();
-	void InitData(std::string strPlan, time_t tBeg, time_t tEnd, std::list<tagPosInfo>lstDev, int nIntv, int nVdCount);
+	void InitData(std::string strID, std::string strPlan, time_t tBeg, time_t tEnd, std::list<tagPosInfo>lstDev, int nIntv, int nVdCount);
 	int StartASnapTurn();
 	
 private:
 	std::string m_strPlanName;
+	std::string m_strPlanID;
 	std::list<tagPosInfo> m_lstPos;
 	time_t m_tStart;
 	time_t m_tEnd;
@@ -53,6 +54,7 @@ public:
 	void  UpdateRunStatus(bool bRun);
 	int  JudgeAndStart();
 	void StartImmediate();
+	std::string m_strID;
 private:
 	PLANINFO    m_tCurSelPlan;
 	HANDLE      m_hThread;
@@ -60,7 +62,7 @@ private:
 	bool        m_bIsPolling;
 	int         m_nPollIndex;
 	std::string m_strSavePath;
-
+	
 	std::string m_strTrunBegTime; //z test 0929 增加，需要在邮件中体现开始时间，结束时间
 
 
