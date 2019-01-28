@@ -47,6 +47,7 @@ protected:
 
 	// 生成的消息映射函数
 	virtual BOOL OnInitDialog();
+	LRESULT PollNextPlan(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
 	afx_msg void OnPaint();
 	afx_msg HCURSOR OnQueryDragIcon();
@@ -73,10 +74,13 @@ public:
 	void OnStateChangedPlayerctrl1(long lType);
 	void OnStreamCallBackPlayerctrl1(long nDataType, unsigned char* pData, long nLength, long UserData, long nWidth, long nHeight, long nFrameRate);
 
+	void refreshData();
+
 	INetAcceptor *p_TcpAcceptor;
 	CPollFunction m_pollFun;
 	std::string m_planid;
 	HANDLE      m_hThread;
+	std::list< PLANINFO> m_planList;
 public:
 	static int m_immediteSession;
 	static HWND					m_hOwner;

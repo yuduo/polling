@@ -11,6 +11,8 @@
 #include "PollDataCfg.h"
 #include "IVQSModule.h"
 
+#define PLAN_COUNT 4
+
 #pragma comment(lib,"VQSModule.lib")
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -86,6 +88,8 @@ BEGIN_MESSAGE_MAP(CMFCApplication1Dlg, CDialogEx)
 	ON_MESSAGE(WM_POLLSNAPVIDEO, ShowSnapPoll)
 	ON_MESSAGE(WM_UPDATESNAPINFO, PollMessageHandle)
 	ON_MESSAGE(WM_POLLINMIDITE, PollImmidate)
+	ON_MESSAGE(WM_POLLNEXTPLAN, PollNextPlan)
+	
 	
 END_MESSAGE_MAP()
 unsigned int CMFCApplication1Dlg::ThreadPollImmediate(void *pParam)
@@ -431,7 +435,9 @@ BOOL CMFCApplication1Dlg::OpenVideo(std::string strPosID,int index)
 		<VideoParam Codec=\"2\" Resolution=\"4\" Fps=\"25\" BRMode=\"1\" Kbps=\"2000\" Enbale=\"1\" />\
 		</InviteConfig> ";
 
-
+	if (strPosID == "") {
+		return false;
+	}
 	
 	switch (index)
 	{
@@ -585,11 +591,15 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 			{
 				PLANINFO plan;
 				plan.InitData();
-				plan.wInterval = atol(logRecord[i]["COL_INTERVAL"].c_str());
+				if (logRecord[i]["COL_INTERVAL"]=="") {
+					plan.wInterval = 60;
+				}else
+					plan.wInterval = atol(logRecord[i]["COL_INTERVAL"].c_str());
 				plan.strPlanName = logRecord[i]["COL_PLAN_NAME"];
 				tagPosInfo tag;
 				tag.strPosID= logRecord[i]["MON_ID"];
 				plan.lstDevice.push_back(tag);
+				plan.wVidCount = PLAN_COUNT;
 				if (logRecord[i]["MONDAY"] != "") {
 					plan.strTimeList.push_back(logRecord[i]["MONDAY"]);
 				}
@@ -611,10 +621,17 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 				if (logRecord[i]["SUNDAY"] != "") {
 					plan.strTimeList.push_back(logRecord[i]["SUNDAY"]);
 				}
-				m_pollFun.SetPollPlan(plan);
-				m_tCurPlanInfo = plan;
+				m_planList.push_back(plan);
+				
 			}
-			m_pollFun.JudgeAndStart();
+			if (m_planList.size() > 0)
+			{
+				auto it = m_planList.begin();
+				m_pollFun.SetPollPlan(*it);
+				m_tCurPlanInfo = *it;
+				m_pollFun.StartPoll();
+				
+			}
 		}
 		catch (...)
 		{
@@ -641,7 +658,22 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
-
+LRESULT CMFCApplication1Dlg::PollNextPlan(WPARAM wParam, LPARAM lParam)
+{
+	std::list<PLANINFO>::iterator itList = m_planList.begin();
+	for (; itList != m_planList.end(); itList++)
+	{
+		if (itList->strPlanName == m_tCurPlanInfo.strPlanName)
+		{
+			auto it = std::next(itList, 1);
+			m_pollFun.SetPollPlan(*it);
+			m_tCurPlanInfo = *it;
+			m_pollFun.StartPoll();
+			break;
+		}
+	}
+	return 0;
+}
 void CMFCApplication1Dlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
 	if ((nID & 0xFFF0) == IDM_ABOUTBOX)
@@ -788,4 +820,93 @@ void CMFCApplication1Dlg::OnStreamCallBackPlayerctrl1(long nDataType, unsigned c
 {
 	// TODO: 在此处添加消息处理程序代码
 
+}
+void CMFCApplication1Dlg::refreshData()
+{
+	//xml
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile("c:\\setting.xml");
+	const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+	const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+	const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+	const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+	const char* localip = doc.FirstChildElement("local")->FirstChildElement("ipaddress")->GetText();
+	const char* localnat = doc.FirstChildElement("local")->FirstChildElement("nataddress")->GetText();
+	//mysql
+	MySQLDB m_DBDriver;
+	//数据库驱动
+	if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+	{
+		m_DBDriver.Disconnect();
+		return ;
+	}
+	if (!m_DBDriver.CheckDB())
+	{
+		return ;
+	}
+	else
+	{
+		try
+		{
+
+			//创建SQL语句
+			std::string setchar = "set charset utf8;";
+			//执行查询
+			m_DBDriver.SQLExecute(setchar);
+
+			//创建SQL语句
+			std::string strSql = "SELECT *  FROM vqdplan  left join monvqd on vqdplan.ID=monvqd.VQD_ID left join collector on vqdplan.COLLECTOR_ID=collector.ID where DIA_TIME=1  AND IP_ADDRESS='" + std::string(localip) + "' or IP_ADDRESS='" + std::string(localnat) + "'";
+			//执行查询
+
+			MySQLResultSet logRecord;
+			m_DBDriver.SQLQuery(strSql, logRecord);
+			int nRowCount = (int)logRecord.size();
+			if (!nRowCount)return ;
+			m_planList.clear();
+			for (int i = 0; i < nRowCount; i++)
+			{
+				PLANINFO plan;
+				plan.InitData();
+				if (logRecord[i]["COL_INTERVAL"] == "") {
+					plan.wInterval = 60;
+				}
+				else
+					plan.wInterval = atol(logRecord[i]["COL_INTERVAL"].c_str());
+				plan.strPlanName = logRecord[i]["COL_PLAN_NAME"];
+				tagPosInfo tag;
+				tag.strPosID = logRecord[i]["MON_ID"];
+				plan.lstDevice.push_back(tag);
+				plan.wVidCount = PLAN_COUNT;
+				if (logRecord[i]["MONDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["MONDAY"]);
+				}
+				if (logRecord[i]["TUESDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["TUESDAY"]);
+				}
+				if (logRecord[i]["WEDNESDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["WEDNESDAY"]);
+				}
+				if (logRecord[i]["THURSDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["THURSDAY"]);
+				}
+				if (logRecord[i]["FRIDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["FRIDAY"]);
+				}
+				if (logRecord[i]["SATURDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["SATURDAY"]);
+				}
+				if (logRecord[i]["SUNDAY"] != "") {
+					plan.strTimeList.push_back(logRecord[i]["SUNDAY"]);
+				}
+				m_planList.push_back(plan);
+
+			}
+			
+		}
+		catch (...)
+		{
+
+		}
+	}
 }

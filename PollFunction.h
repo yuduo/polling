@@ -69,6 +69,7 @@ private:
 	//void WritePollLog(string strLog, string strName);
 	time_t StringToDatetime(std::string str);
 	bool InInvalidTime(std::string strBeg, std::string strEnd);
+	void DeleteCurrentPlan(PLANINFO curPlan);
 	void SendWarningMail();
 
 };

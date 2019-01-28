@@ -221,8 +221,10 @@ int  CPollFunction::JudgeAndStart()
 		if (tMaxTime < r)  //本日已经结束
 		{
 			m_bIsRuning = false;
+			//
+			//下一个任务
 			
-			
+			PostMessage(GetMainHwnd(), WM_POLLNEXTPLAN, 0, 0);
 			
 
 		}
@@ -230,7 +232,7 @@ int  CPollFunction::JudgeAndStart()
 	}
 	else
 	{
-		//if (GetRunStatus())
+		if (GetRunStatus())
 		{
 			cOneTurn.InitData(m_tCurSelPlan.strPlanName, tbeg, tend, m_tCurSelPlan.lstDevice, m_tCurSelPlan.wInterval, m_tCurSelPlan.wVidCount);
 			cOneTurn.StartPoll();
@@ -238,6 +240,7 @@ int  CPollFunction::JudgeAndStart()
 	}
 	return 0;
 }
+
 void CPollFunction::StartImmediate()
 {
 	if (GetRunStatus())

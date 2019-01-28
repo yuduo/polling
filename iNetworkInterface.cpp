@@ -82,26 +82,28 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 	this->planId=root["planId"];
 	//get current run number
 	int current = GetSession();
+	json j;
 	if (current<SUPPORT_TOTOAL)
 	{
+		j["success"] = 0;
 		PostMessage(GetMainHwnd(), WM_POLLINMIDITE, 0, (LPARAM)(LPCTSTR)planId.c_str());
 	}
 	else {
 		retXMLStr = "";
-		json j;
+		
 		j["success"] = 1;
 		j["message"] = "服务器忙";
 		j["code"] = 1001;
-		try {   //Socket 传字符流/二进制流就接收什么,保持流不变
+		
+	}
+	try {   //Socket 传字符流/二进制流就接收什么,保持流不变
 
 			pCon->SendData((unsigned char *)j.dump().c_str(), strlen(j.dump().c_str()));//发送数据->client
 		}
 		catch(...)
 		{
 			
-		}
-	}
-			
+		}		
 		
 	return 1;
 }
