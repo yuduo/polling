@@ -33,11 +33,13 @@ protected:
 
 	LRESULT PollImmidate(WPARAM wParam, LPARAM lParam);
 
-	void AnalysisOne(std::string strPosID, int nscount);
+	void AnalysisOne(std::string strPosID, int nscount, IMAGECOMPARE compare);
 
 	BOOL SaveSnapImage(int index, std::string strFilePath);
 
 	LRESULT PollMessageHandle(WPARAM wParam, LPARAM lParam);
+
+	void ImageResultToDB(std::string strFilePath, int count, IMAGECOMPARE compare);
 
 	void Stop(int index);
 

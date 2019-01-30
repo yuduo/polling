@@ -51,6 +51,30 @@ typedef struct tagPosInfo
 	std::string strGroup;
 }Pos_Info, lpPos_Info;
 
+typedef struct tagImageInfo
+{
+	WORD	BYT_COLOR_CAST;
+	WORD    BYT_CLARITY;
+	WORD	BYT_BRIGHT;
+	WORD	BYT_NOISE;
+	WORD	BYT_WAVE;
+	WORD	BYT_MOVED;
+	WORD	BYT_FREEZE;
+	WORD	BYT_SIGNAL;
+	tagImageInfo()
+	{
+		BYT_COLOR_CAST = 0;
+		BYT_CLARITY = 0;
+		BYT_BRIGHT = 0;
+		BYT_NOISE = 0;
+		BYT_WAVE = 0;
+		BYT_MOVED = 0;
+		BYT_FREEZE = 0;
+		BYT_SIGNAL = 0;
+
+	};
+
+} IMAGECOMPARE;
 typedef struct tagPlanInfo
 {
 	WORD		wInterval;
@@ -64,6 +88,7 @@ typedef struct tagPlanInfo
 	std::string strDateInfo;
 	std::list<std::string> strTimeList;
 	std::list<tagPosInfo>lstDevice;
+	IMAGECOMPARE compare;
 
 	tagPlanInfo()
 	{

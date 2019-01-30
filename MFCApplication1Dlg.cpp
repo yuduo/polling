@@ -12,9 +12,9 @@
 #include "IVQSModule.h"
 
 #define PLAN_COUNT 1
-#define PLAN_STATUS_NULL 1
-#define PLAN_STATUS_RUNNING 2
-#define PLAN_STATUS_DONE 3
+#define PLAN_STATUS_NULL -1
+#define PLAN_STATUS_RUNNING 0
+#define PLAN_STATUS_DONE 1
 #pragma comment(lib,"VQSModule.lib")
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -145,10 +145,20 @@ unsigned int CMFCApplication1Dlg::ThreadPollImmediate(void *pParam)
 				tagPosInfo tag;
 				tag.strPosID = logRecord[i]["MON_ID"];
 				plan.lstDevice.push_back(tag);
+				IMAGECOMPARE compare;
+				compare.BYT_COLOR_CAST = atoi(logRecord[i]["BYT_COLOR_CAST"].c_str());
+				compare.BYT_CLARITY = atoi(logRecord[i]["BYT_CLARITY"].c_str());
+				compare.BYT_BRIGHT = atoi(logRecord[i]["BYT_BRIGHT"].c_str());
+				compare.BYT_NOISE = atoi(logRecord[i]["BYT_NOISE"].c_str());
+				compare.BYT_WAVE = atoi(logRecord[i]["BYT_WAVE"].c_str());
+				compare.BYT_MOVED = atoi(logRecord[i]["BYT_MOVED"].c_str());
+				compare.BYT_FREEZE = atoi(logRecord[i]["BYT_FREEZE"].c_str());
+				compare.BYT_SIGNAL = atoi(logRecord[i]["BYT_SIGNAL"].c_str());
+				plan.compare = compare;
 				//开始画面
 				pThis->OpenVideo(logRecord[i]["MON_ID"], m_immediteSession);
 				Sleep(10000);
-				pThis->AnalysisOne(logRecord[i]["MON_ID"], m_immediteSession);
+				pThis->AnalysisOne(logRecord[i]["MON_ID"], m_immediteSession,compare);
 				pThis->Stop(m_immediteSession);
 			}
 
@@ -177,7 +187,7 @@ LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
 
 	return 0;
 }
-void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount)
+void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount, IMAGECOMPARE compare)
 {
 	std::string strPat = "";
 	sprintf((char*)strPat.c_str(), "%s\\%s", "f:", "temp");
@@ -187,75 +197,11 @@ void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount)
 	char strFilePath[100];
 
 
-	sprintf((char*)strFilePath, _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), strPosID.c_str(),
+	sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), strPosID.c_str(),
 		sm.wYear, sm.wMonth, sm.wDay,
 		sm.wHour, sm.wMinute, sm.wSecond);
 
-	SaveSnapImage(nscount, strFilePath);
-	RESULT_VALUE lpResultOut;
-	if (VQS_API_GetVQSResult(strFilePath, &lpResultOut))
-	{
-		//发送数据库
-		//xml
-		tinyxml2::XMLDocument doc;
-		doc.LoadFile("c:\\setting.xml");
-		const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
-		const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
-		const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
-		const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
-
-		//mysql
-		MySQLDB m_DBDriver;
-		//数据库驱动
-		if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
-		{
-			m_DBDriver.Disconnect();
-			return ;
-		}
-		if (!m_DBDriver.CheckDB())
-		{
-			return ;
-		}
-		else
-		{
-			try
-			{
-
-				//创建SQL语句
-				std::string setchar = "set charset utf8;";
-				//执行查询
-				m_DBDriver.SQLExecute(setchar);
-
-				//创建SQL语句
-				std::string strSql = "insert into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) values('";
-				strSql += lpResultOut.bytColorCastValue;
-				strSql += "','";
-				strSql += lpResultOut.bytClarityValue;
-				strSql += "','";
-				strSql += lpResultOut.bytBrightValue;
-				strSql += "','";
-				strSql += lpResultOut.bytNoiseValue;
-				strSql += "','";
-				strSql += lpResultOut.bytWaveValue;
-				strSql += "','";
-				strSql += lpResultOut.bytMovedValue;
-				strSql += "','";
-				strSql += lpResultOut.bytFreezeValue;
-				strSql += "','";
-				strSql += lpResultOut.bytSignalValue + "')";
-				//执行查询
-
-				MySQLResultSet logRecord;
-				m_DBDriver.SQLQuery(strSql, logRecord);
-
-			}
-			catch (...)
-			{
-
-			}
-		}
-		m_DBDriver.Disconnect();
-	}
+	ImageResultToDB(strFilePath, nscount,compare);
 }
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
 {
@@ -329,71 +275,7 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 				sm.wYear, sm.wMonth, sm.wDay,
 				sm.wHour, sm.wMinute, sm.wSecond);
 			
-			SaveSnapImage(nscount, strFilePath);
-			RESULT_VALUE lpResultOut;
-			if(VQS_API_GetVQSResult(strFilePath,&lpResultOut))
-			{
-				//发送数据库
-				//xml
-				tinyxml2::XMLDocument doc;
-				doc.LoadFile("c:\\setting.xml");
-				const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
-				const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
-				const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
-				const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
-
-				//mysql
-				MySQLDB m_DBDriver;
-				//数据库驱动
-				if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
-				{
-					m_DBDriver.Disconnect();
-					return 0;
-				}
-				if (!m_DBDriver.CheckDB())
-				{
-					return 0;
-				}
-				else
-				{
-					try
-					{
-
-						//创建SQL语句
-						std::string setchar = "set charset utf8;";
-						//执行查询
-						m_DBDriver.SQLExecute(setchar);
-
-						//创建SQL语句
-						std::string strSql = "insert into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) values('";
-						strSql += lpResultOut.bytColorCastValue;
-						strSql += "','";
-						strSql +=lpResultOut.bytClarityValue;
-						strSql += "','";
-						strSql += lpResultOut.bytBrightValue;
-						strSql += "','";
-						strSql += lpResultOut.bytNoiseValue;
-						strSql += "','";
-						strSql += lpResultOut.bytWaveValue;
-						strSql += "','";
-						strSql += lpResultOut.bytMovedValue;
-						strSql += "','";
-						strSql += lpResultOut.bytFreezeValue;
-						strSql += "','";
-						strSql += lpResultOut.bytSignalValue + "')";
-						//执行查询
-
-						MySQLResultSet logRecord;
-						m_DBDriver.SQLQuery(strSql, logRecord);
-						
-					}
-					catch (...)
-					{
-
-					}
-				}
-				m_DBDriver.Disconnect();
-			}
+			ImageResultToDB(strFilePath, nscount, m_tCurPlanInfo.compare);
 			nscount++;
 		}
 		else
@@ -407,7 +289,231 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 
 	return 0;
 }
+/*
+BEGIN
+	#Routine body goes here...
+declare ntype1 int default 0;
+declare ntype2 int default 0;
+declare ntype3 int default 0;
+declare ntype4 int default 0;
+declare ntype5 int default 0;
+declare ntype6 int default 0;
+declare ntype7 int default 0;
+declare ntype8 int default 0;
 
+if( a>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=1 and valve.max > a and a > valve.min  into @ntype1;
+END IF;
+
+if( b>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=2 and valve.max > b and b > valve.min into @ntype2;
+END IF;
+if( c>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=3 and valve.max > c and c > valve.min into @ntype3;
+END IF;
+if( d>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=4 and valve.max > d and d > valve.min into @ntype4;
+END IF;
+if( e>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=5 and valve.max > e and e > valve.min into @ntype5;
+END IF;
+if( f>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=6 and valve.max > f and f > valve.min into @ntype6;
+END IF;
+if( g>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=7 and valve.max > g and g > valve.min into @ntype7;
+END IF;
+if( h>0) then
+	SELECT COUNT(valve.id) FROM valve WHERE valve.vtype=8 and valve.max > h and h > valve.min into @ntype8;
+END IF;
+
+INSERT into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) VALUES(@ntype1,@ntype2,@ntype3,@ntype4,@ntype5,@ntype6,@ntype7,@ntype8);
+END
+*/
+void CMFCApplication1Dlg::ImageResultToDB(std::string strFilePath,int count, IMAGECOMPARE compare)
+{
+	SaveSnapImage(count, strFilePath);
+	RESULT_VALUE lpResultOut;
+	if (VQS_API_GetVQSResult(strFilePath.c_str(), &lpResultOut))
+	{
+		//发送数据库
+		//xml
+		tinyxml2::XMLDocument doc;
+		doc.LoadFile("c:\\setting.xml");
+		const char* Address = doc.FirstChildElement("mysql")->FirstChildElement("Address")->GetText();
+		const char* Port = doc.FirstChildElement("mysql")->FirstChildElement("Port")->GetText();
+		const char* user = doc.FirstChildElement("mysql")->FirstChildElement("user")->GetText();
+		const char* password = doc.FirstChildElement("mysql")->FirstChildElement("password")->GetText();
+
+		//mysql
+		MySQLDB m_DBDriver;
+		//数据库驱动
+		if (!m_DBDriver.Connect(_T(Address), 3306, _T("zhyw"), _T(user), _T(password)))
+		{
+			m_DBDriver.Disconnect();
+			return;
+		}
+		if (!m_DBDriver.CheckDB())
+		{
+			return;
+		}
+		else
+		{
+			try
+			{
+
+				//创建SQL语句
+				std::string setchar = "set charset utf8;";
+				//执行查询
+				m_DBDriver.SQLExecute(setchar);
+
+				std::string strSql = "call proc_diagnosis(";
+				if (compare.BYT_COLOR_CAST) {
+					strSql += lpResultOut.bytColorCastValue;					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+
+				if (compare.BYT_CLARITY) {
+					strSql += lpResultOut.bytClarityValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_BRIGHT) {
+					strSql += lpResultOut.bytBrightValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_NOISE) {
+					strSql += lpResultOut.bytNoiseValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_WAVE) {
+					strSql += lpResultOut.bytWaveValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_MOVED) {
+					strSql += lpResultOut.bytMovedValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_FREEZE) {
+					strSql += lpResultOut.bytFreezeValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ",";
+				if (compare.BYT_SIGNAL) {
+					strSql += lpResultOut.bytSignalValue;
+					
+				}
+				else {
+					strSql += '0';
+				}
+				strSql += ")";
+				
+				MySQLResultSet logRecord;
+				m_DBDriver.SQLQuery(strSql, logRecord);
+				////创建SQL语句
+				//std::string strSql = "insert into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) values('";
+				//MySQLResultSet logRecord;
+				//m_DBDriver.SQLQuery(strSql, logRecord);
+
+
+				////创建SQL语句
+				//strSql = "insert into videodiagnosis (";
+
+				//if (compare.BYT_COLOR_CAST)
+				//	strSql += "IMAGE_BIAS,";
+				//if (compare.BYT_CLARITY)
+				//	strSql += "IMAGE_BLUR,";
+				//if (compare.BYT_BRIGHT)
+				//	strSql += "IMAGE_OVERLIGHTING,";
+				//if (compare.BYT_NOISE)
+				//	strSql += "NOISE_DISTURB,";
+				//if (compare.BYT_WAVE)
+				//	strSql += "FRINGE_DISTURB,";
+				//if (compare.BYT_MOVED)
+				//	strSql += "YUNTAI_ANOMALY,";
+				//if (compare.BYT_FREEZE)
+				//	strSql += "PICTURE_FREEZE,";
+				//if (compare.BYT_SIGNAL)
+				//	strSql += "SIGNAL_LOSS,";
+
+				//strSql = strSql.substr(0, strSql.size() - 1);
+
+				//strSql += ") values('";
+
+				//if (compare.BYT_COLOR_CAST) {
+				//	strSql += lpResultOut.bytColorCastValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_CLARITY) {
+				//	strSql += lpResultOut.bytClarityValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_BRIGHT) {
+				//	strSql += lpResultOut.bytBrightValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_NOISE) {
+				//	strSql += lpResultOut.bytNoiseValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_WAVE) {
+				//	strSql += lpResultOut.bytWaveValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_MOVED) {
+				//	strSql += lpResultOut.bytMovedValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_FREEZE) {
+				//	strSql += lpResultOut.bytFreezeValue;
+				//	strSql += "','";
+				//}
+				//if (compare.BYT_SIGNAL) {
+				//	strSql += lpResultOut.bytSignalValue;
+				//	strSql += "','";
+				//}
+				//strSql = strSql.substr(0, strSql.size() - 2);
+				//strSql += ")";
+
+				////执行查询
+
+
+				//m_DBDriver.SQLQuery(strSql, logRecord);
+
+			}
+			catch (...)
+			{
+
+			}
+		}
+		m_DBDriver.Disconnect();
+	}
+}
 void CMFCApplication1Dlg::Stop(int index) {
 	switch (index)
 	{
@@ -748,9 +854,18 @@ LRESULT CMFCApplication1Dlg::PollNextPlan(WPARAM wParam, LPARAM lParam)
 	{
 		
 		auto it = m_planList.begin();
-		m_pollFun.SetPollPlan(*it);
+		if (m_pollFun.m_strID == std::string(p))
+		{
+			m_pollFun.SetPollPlan(*it);
+			m_pollFun.m_strID = ((PLANINFO)*it).strPlanID;
+			m_pollFun.StartPoll();
+		}
+		else {
+			m_pollFun1.SetPollPlan(*it);
+			m_pollFun1.m_strID = ((PLANINFO)*it).strPlanID;
+			m_pollFun1.StartPoll();
+		}
 		
-		m_pollFun.StartPoll();
 		break;
 		
 	}
@@ -981,6 +1096,16 @@ void CMFCApplication1Dlg::refreshData()
 				if (logRecord[i]["SUNDAY"] != "") {
 					plan.strTimeList.push_back(logRecord[i]["SUNDAY"]);
 				}
+				IMAGECOMPARE compare;
+				compare.BYT_COLOR_CAST = atoi(logRecord[i]["BYT_COLOR_CAST"].c_str());
+				compare.BYT_CLARITY = atoi(logRecord[i]["BYT_CLARITY"].c_str());
+				compare.BYT_BRIGHT = atoi(logRecord[i]["BYT_BRIGHT"].c_str());
+				compare.BYT_NOISE = atoi(logRecord[i]["BYT_NOISE"].c_str());
+				compare.BYT_WAVE = atoi(logRecord[i]["BYT_WAVE"].c_str());
+				compare.BYT_MOVED = atoi(logRecord[i]["BYT_MOVED"].c_str());
+				compare.BYT_FREEZE = atoi(logRecord[i]["BYT_FREEZE"].c_str());
+				compare.BYT_SIGNAL = atoi(logRecord[i]["BYT_SIGNAL"].c_str());
+				plan.compare = compare;
 				m_planList.push_back(plan);
 
 			}

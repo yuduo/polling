@@ -86,6 +86,8 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 	if (current<SUPPORT_TOTOAL)
 	{
 		j["success"] = 0;
+		j["message"] = "³É¹¦";
+		j["code"] = 0;
 		PostMessage(GetMainHwnd(), WM_POLLINMIDITE, 0, (LPARAM)(LPCTSTR)planId.c_str());
 	}
 	else {
