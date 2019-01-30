@@ -190,7 +190,12 @@ LRESULT CMFCApplication1Dlg::PollImmidate(WPARAM wParam, LPARAM lParam)
 void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount, IMAGECOMPARE compare)
 {
 	std::string strPat = "";
-	sprintf((char*)strPat.c_str(), "%s\\%s", "f:", "temp");
+	
+	//xml
+	tinyxml2::XMLDocument doc;
+	doc.LoadFile("c:\\setting.xml");
+	strPat = doc.FirstChildElement("image")->FirstChildElement("Path")->GetText();
+
 	//截图保存相应的目录下
 	SYSTEMTIME sm;
 	GetLocalTime(&sm);
@@ -264,14 +269,18 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 		if (nscount < nCount)
 		{
 			std::string strPat = "";
-			sprintf((char*)strPat.c_str(), "%s\\%s\\", "f:", "temp");
+			//xml
+			tinyxml2::XMLDocument doc;
+			doc.LoadFile("c:\\setting.xml");
+			strPat = doc.FirstChildElement("image")->FirstChildElement("Path")->GetText();
+
 			//截图保存相应的目录下
 			SYSTEMTIME sm;
 			GetLocalTime(&sm);
 			char strFilePath[100];
 
 
-			sprintf((char*)strFilePath, _T("%s/%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
+			sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
 				sm.wYear, sm.wMonth, sm.wDay,
 				sm.wHour, sm.wMinute, sm.wSecond);
 			

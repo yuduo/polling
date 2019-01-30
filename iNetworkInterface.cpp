@@ -6,6 +6,7 @@
 #include <fstream>
 #include "json.hpp"
 #include "PollDataCfg.h"
+#include "base64.h"
 using namespace std;
 #define SUPPORT_TOTOAL 8
 extern const HWND GetMainHwnd();
@@ -86,20 +87,28 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 	if (current<SUPPORT_TOTOAL)
 	{
 		j["success"] = 0;
-		j["message"] = "成功";
+		BYTE byte[4];
+		byte[0] = 0xb3;
+		byte[1] = 0xc9;
+		byte[2] = 0xb9;
+		byte[3] = 0xa6;
+		
+		std::string str1 = "成功";
+		;
+		j["message"] = base64_encode(reinterpret_cast<const unsigned char*>(str1.c_str()), str1.length());
 		j["code"] = 0;
 		PostMessage(GetMainHwnd(), WM_POLLINMIDITE, 0, (LPARAM)(LPCTSTR)planId.c_str());
 	}
 	else {
 		retXMLStr = "";
-		
+		std::string str1 = "服务器忙";
 		j["success"] = 1;
-		j["message"] = "服务器忙";
+		j["message"] = base64_encode(reinterpret_cast<const unsigned char*>(str1.c_str()), str1.length());
 		j["code"] = 1001;
 		
 	}
 	try {   //Socket 传字符流/二进制流就接收什么,保持流不变
-
+		std::string temp = j.dump();
 			pCon->SendData((unsigned char *)j.dump().c_str(), strlen(j.dump().c_str()));//发送数据->client
 		}
 		catch(...)

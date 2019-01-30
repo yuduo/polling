@@ -187,6 +187,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="base64.h" />
     <ClInclude Include="iNetworkInterface.h" />
     <ClInclude Include="IVQSModule.h" />
     <ClInclude Include="json.hpp" />
@@ -204,6 +205,7 @@
     <ClInclude Include="workspacectrl1.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="base64.cpp" />
     <ClCompile Include="iNetworkInterface.cpp" />
     <ClCompile Include="MFCApplication1.cpp" />
     <ClCompile Include="MFCApplication1Dlg.cpp" />
