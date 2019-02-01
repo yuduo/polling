@@ -202,11 +202,11 @@ void CMFCApplication1Dlg::AnalysisOne(std::string strPosID, int nscount, IMAGECO
 	char strFilePath[100];
 
 
-	sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), strPosID.c_str(),
+	sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.bmp"), strPat.c_str(), strPosID.c_str(),
 		sm.wYear, sm.wMonth, sm.wDay,
 		sm.wHour, sm.wMinute, sm.wSecond);
 
-	ImageResultToDB(strFilePath, nscount,compare);
+	ImageResultToDB(strPosID,strFilePath, nscount,compare);
 }
 BOOL CMFCApplication1Dlg::SaveSnapImage(int index,std::string strFilePath)
 {
@@ -280,11 +280,11 @@ LRESULT CMFCApplication1Dlg::PollMessageHandle(WPARAM wParam, LPARAM lParam)
 			char strFilePath[100];
 
 
-			sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.jpg"), strPat.c_str(), itDmList->strPosID.c_str(),
+			sprintf((char*)strFilePath, _T("%s\\%s_%d%02d%02d_%02d%02d%02d.bmp"), strPat.c_str(), itDmList->strPosID.c_str(),
 				sm.wYear, sm.wMonth, sm.wDay,
 				sm.wHour, sm.wMinute, sm.wSecond);
 			
-			ImageResultToDB(strFilePath, nscount, m_tCurPlanInfo.compare);
+			ImageResultToDB(itDmList->strPosID,strFilePath, nscount, m_tCurPlanInfo.compare);
 			nscount++;
 		}
 		else
@@ -339,12 +339,31 @@ END IF;
 INSERT into videodiagnosis (IMAGE_BIAS,IMAGE_BLUR,IMAGE_OVERLIGHTING,NOISE_DISTURB,FRINGE_DISTURB,YUNTAI_ANOMALY,PICTURE_FREEZE,SIGNAL_LOSS) VALUES(@ntype1,@ntype2,@ntype3,@ntype4,@ntype5,@ntype6,@ntype7,@ntype8);
 END
 */
-void CMFCApplication1Dlg::ImageResultToDB(std::string strFilePath,int count, IMAGECOMPARE compare)
+void CMFCApplication1Dlg::ImageResultToDB(std::string strPosID, std::string strFilePath,int count, IMAGECOMPARE compare)
 {
 	SaveSnapImage(count, strFilePath);
 	RESULT_VALUE lpResultOut;
+	memset(&lpResultOut, 0, sizeof(lpResultOut));
+	if (FILE *file = fopen(strFilePath.c_str(), "r")) {
+		fclose(file);
+		
+	}
+	else {
+		
+		return;
+	}
 	if (VQS_API_GetVQSResult(strFilePath.c_str(), &lpResultOut))
 	{
+		if (lpResultOut.bytBrightValue == 0 &&
+			lpResultOut.bytColorCastValue == 0 &&
+			lpResultOut.bytClarityValue == 0 &&
+			lpResultOut.bytNoiseValue == 0 &&
+			lpResultOut.bytWaveValue == 0 &&
+			lpResultOut.bytMovedValue == 0 &&
+			lpResultOut.bytFreezeValue == 0 &&
+			lpResultOut.bytSignalValue == 0) {
+			return;
+		}
 		//·¢ËÍÊý¾Ý¿â
 		//xml
 		tinyxml2::XMLDocument doc;
@@ -377,6 +396,8 @@ void CMFCApplication1Dlg::ImageResultToDB(std::string strFilePath,int count, IMA
 				m_DBDriver.SQLExecute(setchar);
 
 				std::string strSql = "call proc_diagnosis(";
+				strSql += strPosID;
+				strSql += ",";
 				if (compare.BYT_COLOR_CAST) {
 					strSql += lpResultOut.bytColorCastValue;					
 				}
@@ -733,6 +754,8 @@ BOOL CMFCApplication1Dlg::OnInitDialog()
 				plan.strPlanID= logRecord[i]["ID"];
 				tagPosInfo tag;
 				tag.strPosID= logRecord[i]["MON_ID"];
+				if (tag.strPosID == "")
+					continue;
 				plan.lstDevice.push_back(tag);
 				plan.wVidCount = PLAN_COUNT;
 				if (logRecord[i]["MONDAY"] != "") {

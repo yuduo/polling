@@ -39,7 +39,7 @@ protected:
 
 	LRESULT PollMessageHandle(WPARAM wParam, LPARAM lParam);
 
-	void ImageResultToDB(std::string strFilePath, int count, IMAGECOMPARE compare);
+	void ImageResultToDB(std::string strPosID,std::string strFilePath, int count, IMAGECOMPARE compare);
 
 	void Stop(int index);
 

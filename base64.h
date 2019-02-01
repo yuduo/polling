@@ -2,13 +2,26 @@
 //  base64 encoding and decoding with C++.
 //  Version: 1.01.00
 //
-
-#ifndef BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
-#define BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A
-
-#include <string>
-
-std::string base64_encode(unsigned char const* , unsigned int len);
-std::string base64_decode(std::string const& s);
-
-#endif /* BASE64_H_C0CE2A47_D10E_42C9_A27C_C883944E704A */
+/*base_64.h文件*/
+#ifndef BASE_64_H
+#define BASE_64_H
+/**
+ * Base64 编码/解码
+ * @author liruixing
+ */
+class Base64 {
+private:
+	std::string _base64_table;
+static const char base64_pad = '='; public:
+	Base64()
+	{
+		_base64_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"; /*这是Base64编码使用的标准字典*/
+	}
+	/**
+	 * 这里必须是unsigned类型，否则编码中文的时候出错
+	 */
+	std::string Encode(const unsigned char * str, int bytes);
+	std::string Decode(const char *str, int bytes);
+	void Debug(bool open = true);
+};
+#endif

@@ -93,9 +93,9 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 		byte[2] = 0xb9;
 		byte[3] = 0xa6;
 		
-		std::string str1 = "成功";
-		;
-		j["message"] = base64_encode(reinterpret_cast<const unsigned char*>(str1.c_str()), str1.length());
+		unsigned char str1[] = "成功";
+		Base64 *base = new Base64();
+		j["message"] = "5oiQ5Yqf";
 		j["code"] = 0;
 		PostMessage(GetMainHwnd(), WM_POLLINMIDITE, 0, (LPARAM)(LPCTSTR)planId.c_str());
 	}
@@ -103,7 +103,8 @@ int iNetworkInterface::OnReceive(unsigned char *pData, int nLen, INetConnection 
 		retXMLStr = "";
 		std::string str1 = "服务器忙";
 		j["success"] = 1;
-		j["message"] = base64_encode(reinterpret_cast<const unsigned char*>(str1.c_str()), str1.length());
+		Base64 *base = new Base64();
+		j["message"] = "5pyN5Yqh5Zmo5b+Z";
 		j["code"] = 1001;
 		
 	}
